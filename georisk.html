@@ -1,0 +1,87 @@
+
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>GeoRisk デモ</title>
+  <link rel="stylesheet" href="./style.css"/>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>GeoRisk デモ</h1>
+      <p>“いつもと違う”をスコア化。高リスク時のみGeoAuthへ保留を提案します。</p>
+      <div class="navback"><a href="./index.html">← 機能一覧へ戻る</a></div>
+    </header>
+
+    <div class="demo-grid">
+      <aside class="panel">
+        <h2>操作パネル</h2>
+        <h3>行動偏差の選択（複数可）</h3>
+        <div class="row toggle"><input id="f1" type="checkbox"/><label for="f1">未知国からのアクセス</label></div>
+        <div class="row toggle"><input id="f2" type="checkbox"/><label for="f2">深夜帯の操作</label></div>
+        <div class="row toggle"><input id="f3" type="checkbox"/><label for="f3">端末指紋の変化</label></div>
+        <div class="row toggle"><input id="f4" type="checkbox"/><label for="f4">異常な移動速度</label></div>
+        <div class="row toggle"><input id="f5" type="checkbox"/><label for="f5">短時間での試行増加</label></div>
+
+        <div class="hr"></div>
+        <button class="btn" id="calc">リスク計算 → 可視化</button>
+      </aside>
+
+      <main class="result">
+        <h2>リスクスコア</h2>
+        <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center">
+          <div class="gauge">
+            <div class="needle" id="needle"></div>
+            <div class="mask">
+              <div class="label">SCORE</div>
+              <div class="score" id="score">0</div>
+              <div class="label" id="label">Low</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="status"><span class="badge" id="badge">情報</span><span id="action">要因を選んで「リスク計算」を押してください。</span></div>
+            <div class="chips" id="chips"></div>
+          </div>
+        </div>
+
+        <div class="rulepath" id="handoff"></div>
+      </main>
+    </div>
+
+    <footer class="footer">デモは擬似計算です。実環境ではベースライン学習と重み最適化を行います。</footer>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    function level(s){ if(s>=85) return 'Critical'; if(s>=70) return 'High'; if(s>=40) return 'Medium'; return 'Low'; }
+    function badgeKind(s){ if(s>=70) return 'warn'; if(s<40) return 'ok'; return 'warn'; }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      $('calc').addEventListener('click', () => {
+        const flags = [ $('f1').checked, $('f2').checked, $('f3').checked, $('f4').checked, $('f5').checked ];
+        const weights = [35,25,20,15,15];
+        let score = 0, contrib=[];
+        flags.forEach((on,i)=>{ if(on){ score+=weights[i]; contrib.push(['未知国','深夜','端末指紋変化','移動速度異常','試行増加'][i] + ` (+${weights[i]})`);} });
+        score = Math.min(100, score);
+        $('score').textContent = score;
+        $('label').textContent = level(score);
+        $('needle').style.transform = `translateY(22px) rotate(${Math.round((score/100)*360)}deg)`;
+
+        const b = $('badge');
+        b.className = 'badge ' + (score>=70?'warn':'ok');
+        b.textContent = score>=70 ? '注意' : '許可';
+        $('action').textContent = score>=70 ? '高リスク：GeoAuthに保留を提案します。' : '低〜中リスク：そのまま進行。';
+
+        const chips = $('chips'); chips.innerHTML=''; (contrib.length?contrib:['偏差なし']).forEach(t=>{ const d=document.createElement('div'); d.className='chip'; d.textContent=t; chips.appendChild(d); });
+
+        $('handoff').innerHTML = score>=70
+          ? `<div class="step warn"><div class="dot"></div><div>GeoRisk≥70 → GeoAuthに「保留」を指示</div></div>`
+          : `<div class="step ok"><div class="dot"></div><div>GeoRisk&lt;70 → 許可（モニタのみ）</div></div>`;
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>GeoAuthのSBT デモ</title>
+  <link rel="stylesheet" href="./style.css"/>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>GeoAuthのSBT デモ</h1>
+      <p>「検証済み」の事実だけを非譲渡トークンで持ち運ぶフローを体験。</p>
+      <div class="navback"><a href="./index.html">← 機能一覧へ戻る</a></div>
+    </header>
+
+    <div class="demo-grid">
+      <aside class="panel">
+        <h2>操作パネル</h2>
+        <div class="row"><button class="btn" id="verify">セーフゾーン検証を実行</button></div>
+        <div class="row"><button class="btn" id="mint">SBTを発行</button></div>
+        <div class="row"><button class="btn" id="use">外部dAppで活用</button></div>
+        <div class="row"><button class="btn" id="revoke" style="background:linear-gradient(180deg,#e11d48,#c40f3f)">SBTを失効</button></div>
+        <div class="row"><button class="btn" id="remint">再発行</button></div>
+      </aside>
+
+      <main class="result">
+        <h2>状態と可視化</h2>
+        <div class="status"><span class="badge" id="badge">未検証</span><span id="text">「セーフゾーン検証を実行」を押してください。</span></div>
+
+        <div class="hr"></div>
+        <div class="card" style="padding:14px;box-shadow:none" id="sbtcard">
+          <div style="display:flex;gap:12px;align-items:center;">
+            <div style="width:82px;height:82px;border-radius:8px;border:1px solid #dfeaff;background:
+              linear-gradient(90deg, #0000 10px, rgba(13,39,80,.85) 10px 12px, #0000 12px),
+              linear-gradient(#0000 10px, rgba(13,39,80,.85) 10px 12px, #0000 12px),
+              linear-gradient(90deg, #0000 36px, rgba(13,39,80,.85) 36px 38px, #0000 38px),
+              linear-gradient(#0000 36px, rgba(13,39,80,.85) 36px 38px, #0000 38px),
+              repeating-linear-gradient(90deg, rgba(13,39,80,.85) 0 6px, #0000 6px 12px),
+              repeating-linear-gradient( rgba(13,39,80,.85) 0 6px, #0000 6px 12px);"></div>
+            <div>
+              <div style="font-weight:800">GeoAuth Verified SBT</div>
+              <div class="muted" id="sid" style="font-family:ui-monospace,monospace;font-size:12px;color:#4a5a6a">id: —</div>
+              <div class="muted" id="ttl" style="font-size:12px;color:#4a5a6a">有効期限: —</div>
+            </div>
+          </div>
+          <div id="iss" style="font-size:12px;margin-top:8px">発行者: — / 署名: —</div>
+        </div>
+
+        <div class="rulepath" id="flow"></div>
+      </main>
+    </div>
+
+    <footer class="footer">デモは擬似発行です。実際は失効・更新や発行者検証をスマートコントラクトで管理します。</footer>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    function rid(){ const c='abcdef0123456789'; let s='0x'; for(let i=0;i<16;i++) s+=c[Math.floor(Math.random()*c.length)]; return s; }
+    function setBadge(k,t){ const b=$('badge'); b.className='badge '+(k||''); b.textContent=t; }
+    function timePlus(days){ const d = new Date(Date.now()+days*24*60*60*1000); return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`; }
+    function step(kind, text){ return `<div class="step ${kind}"><div class="dot"></div><div>${text}</div></div>`; }
+
+    let verified=false, minted=false, revoked=false;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      $('verify').addEventListener('click', () => {
+        verified = true; minted=false; revoked=false;
+        setBadge('ok','検証済み');
+        $('text').textContent = 'セーフゾーン・端末・時間を検証しました。発行可能です。';
+        $('flow').innerHTML = step('ok','セーフゾーンでの検証完了') + step('ok','登録端末での操作確認') + step('ok','セーフタイム内の操作を確認');
+        $('sid').textContent = 'id: —'; $('ttl').textContent='有効期限: —'; $('iss').textContent='発行者: — / 署名: —';
+      });
+
+      $('mint').addEventListener('click', () => {
+        if(!verified){ setBadge('warn','未検証'); $('text').textContent='先に検証を実行してください。'; return; }
+        minted=true; revoked=false;
+        const id = rid(); const ttl = timePlus(30);
+        setBadge('ok','発行済');
+        $('text').textContent = 'SBTが発行されました。外部dAppで「検証済み」を提示できます。';
+        $('sid').textContent = 'id: ' + id; $('ttl').textContent='有効期限: ' + ttl; $('iss').textContent='発行者: TRUSTAUTHY / 署名: 0x' + Math.random().toString(16).slice(2,10);
+        $('flow').innerHTML = step('ok','セーフゾーン等の検証 → 合格') + step('ok','SBTをウォレットに発行') + step('ok','外部へは「検証済」主張のみを提示（座標は不開示）');
+      });
+
+      $('use').addEventListener('click', () => {
+        if(!minted || revoked){ setBadge('warn','利用不可'); $('text').textContent='有効なSBTを発行してください。'; return; }
+        setBadge('ok','活用中');
+        $('text').textContent = 'パートナーdAppで上限アップ・手続き簡素化が適用されました。';
+        $('flow').innerHTML = step('ok','dApp A: SBT検証 → 入場許可') + step('ok','dApp B: 限度額引き上げ（安全ユーザー優遇）');
+      });
+
+      $('revoke').addEventListener('click', () => {
+        if(!minted){ setBadge('warn','未発行'); $('text').textContent='発行後に失効できます。'; return; }
+        revoked=true; minted=false;
+        setBadge('bad','失効');
+        $('text').textContent = 'SBTは失効しました。再発行が必要です。';
+        $('flow').innerHTML = step('bad','失効トランザクションを記録');
+        $('sid').textContent = 'id: —'; $('ttl').textContent='有効期限: —'; $('iss').textContent='発行者: — / 署名: —';
+      });
+
+      $('remint').addEventListener('click', () => {
+        verified=true; minted=true; revoked=false;
+        const id = rid(); const ttl = timePlus(30);
+        setBadge('ok','再発行');
+        $('text').textContent = 'SBTを再発行しました。';
+        $('sid').textContent = 'id: ' + id; $('ttl').textContent='有効期限: ' + ttl; $('iss').textContent='発行者: TRUSTAUTHY / 署名: 0x' + Math.random().toString(16).slice(2,10);
+        $('flow').innerHTML = step('ok','失効後の再発行が完了');
+      });
+    });
+  </script>
+</body>
+</html>
