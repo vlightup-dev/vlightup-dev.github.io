@@ -11,7 +11,7 @@
   <div class="container">
     <header class="header">
       <h1>GeoMPC デモ</h1>
-      <p>鍵シェアを“場所で割る”。指定された場所・時間条件を満たしたシェアのみ活性化します。</p>
+      <p>鍵シェアを“場所で割る”。登録された場所・時間条件を満たした秘密鍵の鍵シェアを使って署名を実行します。</p>
       <div class="navback"><a href="./index.html">← 機能一覧へ戻る</a></div>
     </header>
 
@@ -34,18 +34,18 @@
 
       <main class="result">
         <h2>シェア状態と結果</h2>
+        <div class="status"><span class="badge" id="badge">待機</span><span id="text">「署名を実行」を押してください。</span></div>
+        <div class="hr"></div>
+
         <div class="nodes">
           <div class="node"><div class="lock" id="lcfo">🔒</div><h4>CFO シェア</h4><div class="state">位置条件：<span class="kbd" id="scfo">未充足</span></div></div>
           <div class="node"><div class="lock" id="lops">🔒</div><h4>オペ責任者 シェア</h4><div class="state">位置条件：<span class="kbd" id="sops">未充足</span></div></div>
           <div class="node"><div class="lock" id="laud">🔒</div><h4>監査 シェア</h4><div class="state">位置条件：<span class="kbd" id="saud">未充足</span></div></div>
         </div>
-
-        <div class="hr"></div>
-        <div class="status"><span class="badge" id="badge">待機</span><span id="text">「署名を実行」を押してください。</span></div>
       </main>
     </div>
 
-    <footer class="footer">デモは擬似ロジックです。実際はジオフェンス内で秘密計算が活性化します。</footer>
+    <footer class="footer">デモは擬似ロジックです。実際はデバイスや衛星受信機の位置情報を元に鍵シェアが活性化します。</footer>
   </div>
 
   <script>
