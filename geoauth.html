@@ -21,7 +21,7 @@
         <h3>シナリオ</h3>
         <div class="row">
           <button class="btn" id="scenario-ok">普段どおり（許可）</button>
-          <button class="btn" id="scenario-hold" style="background:linear-gradient(180deg,#d97706,#b35f05)">深夜×未知エリア（保留）</button>
+          <button class="btn" id="scenario-not-safe" style="background:linear-gradient(180deg,#d97706,#b35f05)">未知エリア（拒否）</button>
         </div>
 
         <h3>取引パラメータ</h3>
@@ -81,38 +81,26 @@
         return;
       }
 
-      const high = amount >= 200000;
-      if(!high && loc==='safe'){
-        badge('ok','セーフゾーン内の少額取引 → 許可');
-        chipify(['≤200,000円','セーフゾーン','SBT保有']);
-        $('path').innerHTML = rows.concat(step('ok','少額かつセーフゾーン')).join('');
-        return;
-      }
-
-      if(high){
-        rows.push(step('warn','高額取引 → 強条件で評価'));
-        const conds = [
-          {ok:loc==='safe', name:'セーフゾーン'},
-          {ok:time==='business', name:'業務時間'},
-          {ok:dev==='known', name:'登録端末'}
-        ];
-        conds.forEach(c=> rows.push(step(c.ok?'ok':'bad', `${c.name} ${c.ok?'OK':'NG'}`)));
-        const okAll = conds.every(c=>c.ok);
-        if(okAll){
-          badge('ok','高額＋三条件成立 → 許可');
-          chipify(['≥200,000円','セーフゾーン','業務時間','登録端末','SBT保有']);
-        }else{
-          badge('warn','条件未達 → 取引保留（セーフゾーンで再承認）');
-          chipify(['高額','条件未達','セーフゾーンで再承認']);
-        }
+      if(loc==='safe' && time==='business' && dev==='known'){
+        badge('ok','全条件成立 → 許可');
+        chipify(['セーフゾーン','業務時間','登録端末','SBT保有']);
+        rows.push(step('ok','セーフゾーン'));
+        rows.push(step('ok','業務時間'));
+        rows.push(step('ok','登録端末'));
         $('path').innerHTML = rows.join('');
         return;
       }
 
-      // medium
-      badge('warn','逸脱を検知 → 一時保留（追加認証）');
+      badge('bad','逸脱を検知 → 認証失敗（再認証）');
       chipify(['逸脱検知','追加認証','セーフゾーンで再承認']);
-      rows.push(step('bad','セーフゾーン外/未知端末/深夜'));
+      
+      const conds = [
+        {ok:loc==='safe', name:'セーフゾーン'},
+        {ok:time==='business', name:'業務時間'},
+        {ok:dev==='known', name:'登録端末'}
+      ];
+      conds.forEach(c=> rows.push(step(c.ok?'ok':'bad', `${c.name} ${c.ok?'OK':'NG'}`)));
+      
       $('path').innerHTML = rows.join('');
     }
 
@@ -121,8 +109,8 @@
       $('scenario-ok').addEventListener('click', () => {
         $('amount').value = 100000; $('loc').value='safe'; $('time').value='business'; $('dev').value='known'; $('sbt').checked=true; evalPolicy();
       });
-      $('scenario-hold').addEventListener('click', () => {
-        $('amount').value = 300000; $('loc').value='unknown'; $('time').value='night'; $('dev').value='unknown'; $('sbt').checked=true; evalPolicy();
+      $('scenario-not-safe').addEventListener('click', () => {
+        $('amount').value = 300000; $('loc').value='unknown'; $('time').value='business'; $('dev').value='known'; $('sbt').checked=true; evalPolicy();
       });
     });
   </script>
