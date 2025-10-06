@@ -62,7 +62,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       $('calc').addEventListener('click', () => {
         const flags = [ $('f1').checked, $('f2').checked, $('f3').checked, $('f4').checked, $('f5').checked ];
-        const weights = [100,25,50,35,10];
+        const weights = [100,25,50,50,10];
         let score = 0, contrib=[];
         flags.forEach((on,i)=>{ if(on){ score+=weights[i]; contrib.push(['未知の位置情報','深夜','端末変化','移動速度異常','試行増加'][i] + ` (+${weights[i]})`);} });
         score = Math.min(100, score);
