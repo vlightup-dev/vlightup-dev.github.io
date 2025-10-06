@@ -1,0 +1,118 @@
+
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>GeoAuth デモ</title>
+  <link rel="stylesheet" href="./style.css"/>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>GeoAuth デモ</h1>
+      <p>取引に「場所×時間×端末」のポリシーを付与し、逸脱時だけ強く制御します。</p>
+      <div class="navback"><a href="./index.html">← 機能一覧へ戻る</a></div>
+    </header>
+
+    <div class="demo-grid">
+      <aside class="panel">
+        <h2>操作パネル</h2>
+        <h3>シナリオ</h3>
+        <div class="row">
+          <button class="btn" id="scenario-ok">普段どおり（許可）</button>
+          <button class="btn" id="scenario-not-safe" style="background:linear-gradient(180deg,#d97706,#b35f05)">未知エリア（拒否）</button>
+        </div>
+
+        <h3>取引パラメータ</h3>
+        <div class="row"><label>金額（JPY）</label><input id="amount" type="number" min="0" step="10000" value="100000"/></div>
+        <div class="row"><label>場所</label>
+          <select id="loc"><option value="safe">セーフゾーン（自宅/オフィス）</option><option value="unknown">未知エリア（海外/公共Wi‑Fi）</option></select>
+        </div>
+        <div class="row"><label>時間帯</label>
+          <select id="time"><option value="business">業務時間</option><option value="night">深夜</option></select>
+        </div>
+        <div class="row"><label>端末</label>
+          <select id="dev"><option value="known">登録端末</option><option value="unknown">未知端末</option></select>
+        </div>
+        <div class="row toggle"><input id="sbt" type="checkbox" checked/><label for="sbt">GeoAuthのSBT 保有</label></div>
+
+        <div class="hr"></div>
+        <button class="btn" id="run">リクエスト送信 → ルール判定</button>
+      </aside>
+
+      <main class="result">
+        <h2>ポリシー判定結果</h2>
+        <div class="status" id="status"><span class="badge">待機</span><span id="statusText">パラメータを設定して判定を実行してください。</span></div>
+        <div class="chips" id="chips"></div>
+        <div class="rulepath" id="path"></div>
+      </main>
+    </div>
+
+    <footer class="footer">デモは擬似ロジックです（しきい値はクライアント側で可視化のために固定）。</footer>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const badge = (kind, text) => {
+      const status = $('status');
+      status.innerHTML = `<span class="badge ${kind}">${kind==='ok'?'許可':kind==='warn'?'保留':'拒否'}</span><span>${text}</span>`;
+    };
+    const chipify = list => {
+      const c = $('chips'); c.innerHTML = '';
+      list.forEach(t => { const d=document.createElement('div'); d.className='chip'; d.textContent=t; c.appendChild(d); });
+    };
+    const step = (k, t) => `<div class="step ${k}"><div class="dot"></div><div>${t}</div></div>`;
+
+    function evalPolicy(){
+      const amount = Number($('amount').value||0);
+      const loc = $('loc').value;
+      const time = $('time').value;
+      const dev = $('dev').value;
+      const hasSbt = $('sbt').checked;
+
+      const rows = [];
+      rows.push(step('ok', `金額 ${amount.toLocaleString()} 円`));
+
+      if(!hasSbt){
+        badge('warn','SBT未保有 → 追加確認へ');
+        chipify(['SBT 未保有','ステップアップ必要']);
+        $('path').innerHTML = rows.concat(step('warn','SBTの検証を要求')).join('');
+        return;
+      }
+
+      if(loc==='safe' && time==='business' && dev==='known'){
+        badge('ok','全条件成立 → 許可');
+        chipify(['セーフゾーン','業務時間','登録端末','SBT保有']);
+        rows.push(step('ok','セーフゾーン'));
+        rows.push(step('ok','業務時間'));
+        rows.push(step('ok','登録端末'));
+        $('path').innerHTML = rows.join('');
+        return;
+      }
+
+      badge('bad','逸脱を検知 → 認証失敗（再認証）');
+      chipify(['逸脱検知','追加認証','セーフゾーンで再承認']);
+      
+      const conds = [
+        {ok:loc==='safe', name:'セーフゾーン'},
+        {ok:time==='business', name:'業務時間'},
+        {ok:dev==='known', name:'登録端末'}
+      ];
+      conds.forEach(c=> rows.push(step(c.ok?'ok':'bad', `${c.name} ${c.ok?'OK':'NG'}`)));
+      
+      $('path').innerHTML = rows.join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      $('run').addEventListener('click', evalPolicy);
+      $('scenario-ok').addEventListener('click', () => {
+        $('amount').value = 100000; $('loc').value='safe'; $('time').value='business'; $('dev').value='known'; $('sbt').checked=true; evalPolicy();
+      });
+      $('scenario-not-safe').addEventListener('click', () => {
+        $('amount').value = 300000; $('loc').value='unknown'; $('time').value='business'; $('dev').value='known'; $('sbt').checked=true; evalPolicy();
+      });
+    });
+  </script>
+</body>
+</html>
